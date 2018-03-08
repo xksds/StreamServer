@@ -27,18 +27,21 @@ JNIEXPORT jlong PackageName(init)(JNIEnv *env, jclass thiz, jobject weak_ref)
         goto ERR;
 
 #if ENABLE_FFMPEG
-    server->rtspServer = FfmpegRTSPServer::createNew(*(server->env), PORT, NULL);
+
+    server->rtspServer = FfmpegRTSPServer::CreateNew(*(server->env), Port(PORT));
     if (NULL == server->rtspServer) {
         ALOGE("Failed to create FFMPEG RTSP server:%s", server->env->getResultMsg());
-        server->rtspServer = FfmpegRTSPServer::createNew(*(server->env), PORT + 1, NULL);
+        server->rtspServer = FfmpegRTSPServer::CreateNew(*(server->env), Port(PORT + 1));
         if (NULL == server->rtspServer) {
             ALOGE("Failed to create FFMPEG RTSP server:%s", server->env->getResultMsg());
             goto ERR;
         }
     } else {
-        ALOGI("%p: create FFMPEG RTSP server successful in 8554!", server);
+        ALOGI("%p:%p create FFMPEG RTSP server successful in 8554!", server, server->rtspServer);
     }
+
 #else
+
     server->rtspServer = RTSPServer::createNew(*(server->env), PORT, NULL);
     if (NULL == server->rtspServer) {
         ALOGE("Failed to create RTSP server:%s", server->env->getResultMsg());
@@ -48,8 +51,9 @@ JNIEXPORT jlong PackageName(init)(JNIEnv *env, jclass thiz, jobject weak_ref)
             goto ERR;
         }
     } else {
-        ALOGI("%p: create RTSP server successful in 8554!", server);
+        ALOGI("%p:%p create RTSP server successful in 8554!", server, server->rtspServer);
     }
+
 #endif // ENABLE_FFMPEG
 
     return (int64_t) server;
@@ -71,7 +75,7 @@ void PackageName(uninit)(JNIEnv *env, jobject thiz, long long handler)
 
     ServerStruct  *server = (ServerStruct*)handler;
 
-    ALOGD("%p: Uninit server ...", server);
+    ALOGD("%p:%p Uninit server ...", server, server->rtspServer);
 
     pthread_mutex_lock(&server->interface_lock);
     server->exitLoop = ~0;
@@ -117,7 +121,7 @@ jint PackageName(setInputFilePath)(JNIEnv *env, jobject thiz, long long handler,
 
     ServerStruct  *server = (ServerStruct*)handler;
 
-    ALOGD("%p: setInputFilePath path %p ...", server, jpath);
+    ALOGD("%p:%p setInputFilePath path %p ...", server, server->rtspServer, jpath);
 
     pthread_mutex_lock(&server->interface_lock);
 
@@ -153,7 +157,7 @@ jint PackageName(setOutputStreamName)(JNIEnv *env, jobject thiz, long long handl
 
     ServerStruct  *server = (ServerStruct*)handler;
 
-    ALOGD("%p: setOutputStreamName name %p ...", server, jname);
+    ALOGD("%p:%p setOutputStreamName name %p ...", server, server->rtspServer, jname);
 
     pthread_mutex_lock(&server->interface_lock);
 
@@ -189,7 +193,7 @@ jint PackageName(start)(JNIEnv *env, jobject thiz, long long handler)
 
     ServerStruct  *server = (ServerStruct*)handler;
 
-    ALOGD("%p: start server ...", server);
+    ALOGD("%p:%p start server ...", server, server->rtspServer);
 
     pthread_mutex_lock(&server->interface_lock);
 
@@ -199,8 +203,8 @@ jint PackageName(start)(JNIEnv *env, jobject thiz, long long handler)
         goto END;
     }
 
-    ALOGD("%p Stream name : %s ", server, server->streamName);
-    ALOGD("%p Input file paht : %s", server, server->inputFilePath);
+    ALOGD("%p:%p Stream name : %s ", server, server->rtspServer, server->streamName);
+    ALOGD("%p:%p Input file paht : %s", server, server->rtspServer, server->inputFilePath);
 
     server->sms = CreateServerMediaSessionByName(*server->env, server->streamName, server->inputFilePath);
     if(NULL == server->sms) {
@@ -217,7 +221,7 @@ jint PackageName(start)(JNIEnv *env, jobject thiz, long long handler)
     if (server->rtspServer->setUpTunnelingOverHTTP(80)
             || server->rtspServer->setUpTunnelingOverHTTP(8000)
             || server->rtspServer->setUpTunnelingOverHTTP(8080)) {
-        ALOGI("we use port-->%d", server->rtspServer->httpServerPortNum());
+        ALOGI("%p:%p we use port-->%d", server, server->rtspServer, server->rtspServer->httpServerPortNum());
     } else {
         ALOGI("RTSP-over-HTTP tunneling is not available.");
     }
@@ -241,7 +245,7 @@ jint PackageName(stop)(JNIEnv *env, jobject thiz, long long handler)
 
     ServerStruct  *server = (ServerStruct*)handler;
 
-    ALOGD("%p: stop server ...", server);
+    ALOGD("%p:%p stop server ...", server, server->rtspServer);
 
     pthread_mutex_lock(&server->interface_lock);
 
@@ -342,7 +346,7 @@ static ServerMediaSession *CreateServerMediaSessionByName(UsageEnvironment& env,
     ServerMediaSession* sms = NULL;
     Boolean const reuseSource = False;
 
-    sms = ServerMediaSession::createNew(env, streamName, streamName, DESCRIPTION);
+    sms = ServerMediaSession::createNew(env, name, streamName, DESCRIPTION);
     if(NULL == sms) return NULL;
 
     if (strcmp(extension, ".aac") == 0) {
@@ -463,7 +467,7 @@ static void announceStream(ServerStruct *server)
     char* url = server->rtspServer->rtspURL(server->sms);
     UsageEnvironment& env = server->rtspServer->envir();
 
-    ALOGI("Play this stream using the URL : %s ", url);
+    ALOGI("%p:%p Play this stream using the URL : %s ", server, server->rtspServer, url);
 
     postEventUptoJava(server, MEDIA_SERVER_ESTABLISHED, 0, 0, (void*)url);
 

@@ -11,6 +11,7 @@
 #include "liveMedia.hh"
 #include "ffmpeg_media.h"
 #include "ffmpeg_rtsp_server.h"
+#include "NetAddress.hh"
 
 
 #define JNI_CLASS_NAME "com/nio/mediaserver/MediaServer"
